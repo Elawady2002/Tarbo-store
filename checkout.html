@@ -340,7 +340,7 @@
 <script>
   const supabaseUrl = 'https://erbidxbhooavcynttbml.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmlkeGJob29hdmN5bnR0Ym1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxODk5MTgsImV4cCI6MjA5Mjc2NTkxOH0.HyksCx9ZVhZNdXfgNLiH3V9HnZUDh8I3KFbM_ovUn8o';
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   function loadCheckout() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -385,7 +385,7 @@
     const total = parseFloat(localStorage.getItem('cartTotal') || '0') + 50;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('orders')
         .insert([
           { 
