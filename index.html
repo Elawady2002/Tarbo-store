@@ -767,17 +767,13 @@
   </div>
   <div class="hero-dots" id="heroDots">
   </div>
-  <div class="hero-content">
-    <h1 class="hero-title">New Collection<br>2025</h1>
-    <a href="#catalog" class="btn-primary">Shop All</a>
-  </div>
 </section>
 
 <!-- FEATURED PRODUCTS -->
 <div id="catalog" class="section">
   <div class="section-header">
-    <h2 class="section-title">Home Page</h2>
-    <a href="#" class="view-all">View all</a>
+    <h2 class="section-title">Products</h2>
+    <a href="#catalog" class="view-all">View all</a>
   </div>
 
   <div class="product-grid" id="productGrid">
@@ -977,70 +973,86 @@
   }
 
   async function fetchProducts() {
-    const { data, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending: false });
-    const productGrid = document.getElementById('productGrid');
-    
-    if (error) {
-      console.error('Error fetching products:', error);
-      showFallbackProducts();
-      return;
+      const { data, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending: false });
+      const productGrid = document.getElementById('productGrid');
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        showProductsMessage('Products are unavailable right now.');
+        return;
+      }
+
+      if (data && data.length > 0) {
+        productGrid.innerHTML = '';
+        data.forEach(product => {
+          const imageUrls = getProductImageUrls(product);
+          if (imageUrls.length) renderProductCard(product, imageUrls);
+        });
+
+        if (!productGrid.children.length) showProductsMessage('No product images uploaded yet.');
+      } else {
+        showProductsMessage('');
+      }
     }
-    
-    if (data && data.length > 0) {
-      productGrid.innerHTML = '';
-      data.forEach(product => {
-        let imageUrl = '';
-        if (product.colors && product.colors.length > 0 && product.colors[0].images && product.colors[0].images.length > 0) {
-          imageUrl = product.colors[0].images[0];
+
+  function showProductsMessage(message) {
+    const productGrid = document.getElementById('productGrid');
+    productGrid.innerHTML = message ? `<div class="empty-state"><p>${message}</p></div>` : '';
+  }
+
+  function getProductImageUrls(product) {
+    const urls = [];
+
+    if (product.image_url) urls.push(product.image_url);
+    if (Array.isArray(product.colors)) {
+      product.colors.forEach(color => {
+        if (Array.isArray(color.images)) {
+          color.images.forEach(url => {
+            if (url && !urls.includes(url)) urls.push(url);
+          });
         }
-        imageUrl = imageUrl || product.image_url || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
-        
-        renderProductCard(product, imageUrl);
       });
-    } else {
-      showFallbackProducts();
     }
+
+    return urls;
   }
 
-  function showFallbackProducts() {
-    const productGrid = document.getElementById('productGrid');
-    productGrid.innerHTML = `
-      <div class="empty-state">
-        <h3>New products are coming soon</h3>
-        <p>Explore a preview selection while the latest drop is being prepared.</p>
-      </div>
-    `;
-    
-    const samples = [
-      { name: "Premium Hoodie", price: 1200, img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=500&q=60" },
-      { name: "Classic Tee", price: 500, img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=500&q=60" },
-      { name: "Denim Jacket", price: 1500, img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=60" },
-      { name: "Urban Cargo", price: 900, img: "https://images.unsplash.com/photo-1517438322307-e67111335449?auto=format&fit=crop&w=500&q=60" }
-    ];
-    
-    samples.forEach(s => renderProductCard(s, s.img));
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[char]));
   }
 
-  function renderProductCard(product, imageUrl) {
+  function renderProductCard(product, imageUrls) {
     const productGrid = document.getElementById('productGrid');
     const card = document.createElement('div');
     card.className = 'product-card';
+    const imageUrl = imageUrls[0];
+    const safePrice = Number(product.price || 0);
+    const productName = product.name || 'Product';
     card.innerHTML = `
       <div class="product-img-wrap">
-        <img src="${imageUrl}" alt="${product.name}" style="cursor: pointer;" onclick="goToProduct('${product.name}', ${product.price}, '${imageUrl}')" />
+        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(productName)}" style="cursor: pointer;" />
         ${product.old_price ? '<span class="badge">Sale</span>' : ''}
         <div class="quick-add">
-          <button class="btn-secondary" onclick="addToCart(this, '${product.name}', ${product.price})">Add to Cart</button>
+          <button class="btn-secondary" type="button">Add to Cart</button>
         </div>
       </div>
       <div class="product-info">
-        <p class="product-name">${product.name}</p>
+        <p class="product-name">${escapeHtml(productName)}</p>
         <div class="price-row">
-          <span class="price-sale">LE ${product.price ? product.price.toLocaleString() : '0'}.00</span>
-          ${product.old_price ? `<span class="price-reg">LE ${product.old_price.toLocaleString()}.00</span>` : ''}
+          <span class="price-sale">LE ${safePrice.toLocaleString()}.00</span>
+          ${product.old_price ? `<span class="price-reg">LE ${Number(product.old_price).toLocaleString()}.00</span>` : ''}
         </div>
       </div>
     `;
+
+    card.querySelector('img').addEventListener('click', () => goToProduct(product, imageUrls));
+    card.querySelector('.quick-add button').addEventListener('click', (event) => addToCart(event.currentTarget, productName, safePrice));
     
     card.addEventListener('mouseenter', () => {
       const qa = card.querySelector('.quick-add');
@@ -1054,9 +1066,10 @@
     productGrid.appendChild(card);
   }
 
-  function goToProduct(name, price, imageUrl) {
-    sessionStorage.setItem('selectedProductImg', imageUrl);
-    window.location.href = `product-detail.html?name=${encodeURIComponent(name)}&price=${price}`;
+  function goToProduct(product, imageUrls) {
+    sessionStorage.setItem('selectedProduct', JSON.stringify({ ...product, imageUrls }));
+    sessionStorage.setItem('selectedProductImg', imageUrls[0]);
+    window.location.href = `product-detail.html?id=${encodeURIComponent(product.id || '')}`;
   }
 
   document.addEventListener('DOMContentLoaded', () => {

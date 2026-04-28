@@ -414,7 +414,7 @@
             <span>Details & Care</span>
             <svg class="detail-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
-          <div class="detail-content">
+          <div class="detail-content" id="productDescription">
             Crafted from premium fabrics for a tailored fit that moves with you. This piece combines classic streetwear aesthetics with modern sophistication.
             <br><br>
             • Premium blend material<br>
@@ -451,10 +451,12 @@
 
     // Simulate reading URL params and sessionStorage if we were passing data
     document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const name = urlParams.get('name');
-      const price = urlParams.get('price');
+      const storedProduct = JSON.parse(sessionStorage.getItem('selectedProduct') || 'null');
+      const name = storedProduct && storedProduct.name;
+      const price = storedProduct && storedProduct.price;
+      const oldPrice = storedProduct && storedProduct.old_price;
       const img = sessionStorage.getItem('selectedProductImg');
+      const imageUrls = storedProduct && Array.isArray(storedProduct.imageUrls) ? storedProduct.imageUrls : (img ? [img] : []);
 
       if (name) {
         currentProductName = name;
@@ -462,25 +464,39 @@
         document.getElementById('productNameLabel').textContent = name;
       }
       if (price) {
-        currentProductPrice = parseInt(price);
-        document.getElementById('productPrice').textContent = `LE ${parseInt(price).toLocaleString()}.00`;
-        // Hide regular price for simplicity if dynamic
-        document.getElementById('productRegPrice').style.display = 'none';
+        currentProductPrice = Number(price);
+        document.getElementById('productPrice').textContent = `LE ${Number(price).toLocaleString()}.00`;
+        const regPrice = document.getElementById('productRegPrice');
+        if (oldPrice) {
+          regPrice.textContent = `LE ${Number(oldPrice).toLocaleString()}.00`;
+          regPrice.style.display = '';
+        } else {
+          regPrice.style.display = 'none';
+        }
       }
-      // Example extra images to demonstrate multiple images gallery
-      const extraImages = [
-        "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1618517351616-38fb9c52e047?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-      ];
 
-      if (img) {
-        document.getElementById('productImage').src = img;
+      if (storedProduct && storedProduct.description) {
+        document.getElementById('productDescription').textContent = storedProduct.description;
+      }
+
+      if (storedProduct && Array.isArray(storedProduct.sizes) && storedProduct.sizes.length) {
+        const sizeOptions = document.querySelector('.size-options');
+        sizeOptions.innerHTML = '';
+        storedProduct.sizes.forEach(size => {
+          const btn = document.createElement('button');
+          btn.className = 'size-btn';
+          btn.textContent = size;
+          btn.onclick = () => selectSize(btn);
+          sizeOptions.appendChild(btn);
+        });
+      }
+
+      if (imageUrls.length) {
+        document.getElementById('productImage').src = imageUrls[0];
         
-        // Setup thumbnails
         const thumbContainer = document.getElementById('thumbnailsContainer');
-        const allImages = [img, ...extraImages];
-        
-        allImages.forEach((src, idx) => {
+        thumbContainer.innerHTML = '';
+        imageUrls.forEach((src, idx) => {
           const thumb = document.createElement('img');
           thumb.src = src;
           if (idx === 0) thumb.classList.add('active');
