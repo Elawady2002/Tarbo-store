@@ -684,6 +684,20 @@
       background: #fff;
       transform: scale(1.25);
     }
+    .hero-empty-state {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      color: rgba(255,255,255,.76);
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 48%, #0d0d0d 100%);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
     .hero-content { z-index: 2; }
 
     /* Skeleton Loader */
@@ -886,79 +900,69 @@
 <script>
   /**
    * STORE CHANGES SUMMARY:
-   * - Fixed heroDots bug: moved hero-dots outside hero-slider to prevent destruction during refresh.
-   * - Optimized fetchHeroImages: now fetches ONLY the latest row from Supabase to ensure newest images are shown.
-   * - Added error handling: improved fallback logic for when data is missing or fetching fails.
-   * - Fixed redundancy: ensured each refresh only populates the slider once with the most recent data.
+   * - Hero images now load as individual rows from hero_images.
+   * - Uses image_url sorted by sort_order/id to match dashboard ordering.
+   * - Removes bundled Unsplash fallbacks; shows an empty message when no uploaded hero images exist.
    */
   const supabaseUrl = 'https://erbidxbhooavcynttbml.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmlkeGJob29hdmN5bnR0Ym1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxODk5MTgsImV4cCI6MjA5Mjc2NTkxOH0.HyksCx9ZVhZNdXfgNLiH3V9HnZUDh8I3KFbM_ovUn8o';
   const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   async function fetchHeroImages() {
-    const { data, error } = await supabaseClient.from('hero_images').select('*').order('id', { ascending: false }).limit(1);
+    const { data, error } = await supabaseClient
+      .from('hero_images')
+      .select('id,image_url,title,sort_order')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true });
     
     if (error) {
       console.error('Error fetching hero images:', error);
-      showFallbackHero();
+      showEmptyHero('Hero images are unavailable right now');
       return;
     }
     
     const heroSlider = document.getElementById('heroSlider');
     const heroDots = document.getElementById('heroDots');
-    
-    if (data && data.length > 0) {
-      heroSlider.innerHTML = '';
-      heroDots.innerHTML = '';
-      
-      let slideIndex = 0;
-      const latestRow = data[0];
-      if (latestRow.images && Array.isArray(latestRow.images)) {
-        latestRow.images.forEach((imgUrl) => {
-          const slide = document.createElement('div');
-          slide.className = `hero-slide ${slideIndex === 0 ? 'active' : ''}`;
-          slide.innerHTML = `<img src="${imgUrl}" alt="Hero Image" />`;
-          heroSlider.appendChild(slide);
-          
-          const dot = document.createElement('div');
-          dot.className = `dot ${slideIndex === 0 ? 'active' : ''}`;
-          dot.onclick = (function(idx) { return function() { goSlide(idx); } })(slideIndex);
-          heroDots.appendChild(dot);
-          
-          slideIndex++;
-        });
-        
-        slides = document.querySelectorAll('.hero-slide');
-        dots = document.querySelectorAll('.dot');
-      } else {
-        showFallbackHero();
-      }
-    } else {
-      showFallbackHero();
-    }
-  }
 
-  function showFallbackHero() {
-    const heroSlider = document.getElementById('heroSlider');
-    const heroDots = document.querySelector('.hero-dots');
-    const fallbacks = [
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1600",
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=1600"
-    ];
-    
     heroSlider.innerHTML = '';
     heroDots.innerHTML = '';
-    fallbacks.forEach((url, i) => {
+    currentSlide = 0;
+
+    const heroRows = (data || []).filter(item => item.image_url);
+    if (!heroRows.length) {
+      showEmptyHero('No hero images uploaded yet');
+      return;
+    }
+
+    heroRows.forEach((item, slideIndex) => {
       const slide = document.createElement('div');
-      slide.className = `hero-slide ${i === 0 ? 'active' : ''}`;
-      slide.innerHTML = `<img src="${url}" alt="Collection Image" />`;
+      slide.className = `hero-slide ${slideIndex === 0 ? 'active' : ''}`;
+
+      const img = document.createElement('img');
+      img.src = item.image_url;
+      img.alt = item.title || 'Hero Image';
+      slide.appendChild(img);
       heroSlider.appendChild(slide);
-      
+
       const dot = document.createElement('div');
-      dot.className = `dot ${i === 0 ? 'active' : ''}`;
-      dot.onclick = () => goSlide(i);
+      dot.className = `dot ${slideIndex === 0 ? 'active' : ''}`;
+      dot.onclick = () => goSlide(slideIndex);
       heroDots.appendChild(dot);
     });
+
+    slides = document.querySelectorAll('.hero-slide');
+    dots = document.querySelectorAll('.dot');
+  }
+
+  function showEmptyHero(message) {
+    const heroSlider = document.getElementById('heroSlider');
+    const heroDots = document.getElementById('heroDots');
+    heroSlider.innerHTML = '';
+    heroDots.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'hero-empty-state';
+    empty.textContent = message;
+    heroSlider.appendChild(empty);
     slides = document.querySelectorAll('.hero-slide');
     dots = document.querySelectorAll('.dot');
   }
@@ -1195,11 +1199,12 @@
   let dots   = document.querySelectorAll('.dot');
   function goSlide(n) {
     if (slides.length === 0) return;
+    if (currentSlide >= slides.length) currentSlide = 0;
     slides[currentSlide].classList.remove('active');
-    dots[currentSlide].classList.remove('active');
+    if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
     currentSlide = (n + slides.length) % slides.length;
     slides[currentSlide].classList.add('active');
-    dots[currentSlide].classList.add('active');
+    if (dots[currentSlide]) dots[currentSlide].classList.add('active');
   }
   // Setup interval to keep sliding
   setInterval(() => goSlide(currentSlide + 1), 3500);
