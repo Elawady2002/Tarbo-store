@@ -333,11 +333,19 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
   const supabaseUrl = 'https://erbidxbhooavcynttbml.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmlkeGJob29hdmN5bnR0Ym1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxODk5MTgsImV4cCI6MjA5Mjc2NTkxOH0.HyksCx9ZVhZNdXfgNLiH3V9HnZUDh8I3KFbM_ovUn8o';
-  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+  
+  let supabaseClient;
+  try {
+    if (window.supabase) {
+      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    }
+  } catch (e) {
+    console.error("Supabase init error:", e);
+  }
 
   // ── Language ──────────────────────────────────────────────────
   const translations = {
@@ -374,29 +382,7 @@
   let currentLang = localStorage.getItem('checkoutLang') || 'en';
   let shippingCost = 0;
   let walletPhone = '';
-  // Initialized with fallback IMMEDIATELY so it's ready before any function runs
-  let governorates = []; 
-
-  function setLang(lang) {
-    currentLang = lang;
-    localStorage.setItem('checkoutLang', lang);
-    document.getElementById('htmlRoot').setAttribute('lang', lang);
-    document.getElementById('btnEn').classList.toggle('active', lang === 'en');
-    document.getElementById('btnAr').classList.toggle('active', lang === 'ar');
-    document.body.classList.toggle('rtl', lang === 'ar');
-
-    const t = translations[lang];
-    Object.keys(t).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = t[id];
-    });
-
-    // Re-populate governorate select
-    populateGovernorates();
-    updateShipping();
-  }
-
-  // ── Governorates ──────────────────────────────────────────────
+  // Initialized with fallback IMMEDIATELY
   const FALLBACK_GOVERNORATES = [
     {id:'cairo',    name_ar:'القاهرة',       name_en:'Cairo',         shipping_price:50},
     {id:'giza',     name_ar:'الجيزة',        name_en:'Giza',          shipping_price:50},
@@ -427,14 +413,29 @@
     {id:'southsin', name_ar:'جنوب سيناء',   name_en:'South Sinai',   shipping_price:90},
     {id:'sadat',    name_ar:'السادات',       name_en:'Sadat City',    shipping_price:65},
   ];
+  let governorates = [...FALLBACK_GOVERNORATES]; 
 
+  function setLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('checkoutLang', lang);
+    document.getElementById('htmlRoot').setAttribute('lang', lang);
+    document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+    document.getElementById('btnAr').classList.toggle('active', lang === 'ar');
+    document.body.classList.toggle('rtl', lang === 'ar');
+
+    const t = translations[lang];
+    Object.keys(t).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = t[id];
+    });
+
+    populateGovernorates();
+    updateShipping();
+  }
+
+  // ── Governorates ──────────────────────────────────────────────
   async function loadGovernorates() {
-    // If we don't have governorates yet, use fallback
-    if (!governorates.length) {
-      governorates = [...FALLBACK_GOVERNORATES];
-      populateGovernorates();
-    }
-
+    if (!supabaseClient) return;
     try {
       const { data, error } = await supabaseClient
         .from('governorates')
@@ -442,21 +443,21 @@
         .order('name_en', { ascending: true });
       if (!error && data && data.length) {
         governorates = data;
-        populateGovernorates(); // Update with live prices
+        populateGovernorates();
       }
     } catch(e) {
-      if (!governorates.length) governorates = [...FALLBACK_GOVERNORATES];
-      populateGovernorates();
+      console.warn("Supabase fetch error:", e);
     }
   }
 
   function populateGovernorates() {
     const sel = document.getElementById('governorate');
+    if (!sel) return;
     const t = translations[currentLang];
     sel.innerHTML = `<option value="">${t.lblSelectGov}</option>`;
     governorates.forEach(g => {
       const opt = document.createElement('option');
-      opt.value = g.id;
+      opt.value = g.id || g.name_en;
       opt.dataset.price = g.shipping_price || 0;
       opt.textContent = currentLang === 'ar' ? (g.name_ar || g.name_en) : (g.name_en || g.name_ar);
       sel.appendChild(opt);
@@ -465,6 +466,7 @@
 
   function updateShipping() {
     const sel = document.getElementById('governorate');
+    if (!sel) return;
     const opt = sel.options[sel.selectedIndex];
     const t = translations[currentLang];
     if (!opt || !opt.value) {
@@ -481,20 +483,23 @@
 
   function recalcTotal() {
     const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
-    document.getElementById('subtotalDisplay').textContent = `LE ${subtotal.toLocaleString()}.00`;
-    document.getElementById('totalDisplay').textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
+    const subtotalDisplay = document.getElementById('subtotalDisplay');
+    const totalDisplay = document.getElementById('totalDisplay');
+    if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
+    if (totalDisplay) totalDisplay.textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
   }
 
-  // ── Payment switching ─────────────────────────────────────────
   function switchPayment(method) {
-    document.getElementById('optionCOD').classList.toggle('selected', method === 'cod');
-    document.getElementById('optionEwallet').classList.toggle('selected', method === 'ewallet');
+    const optionCOD = document.getElementById('optionCOD');
+    const optionEwallet = document.getElementById('optionEwallet');
     const panel = document.getElementById('ewalletDetails');
-    panel.classList.toggle('visible', method === 'ewallet');
+    if (optionCOD) optionCOD.classList.toggle('selected', method === 'cod');
+    if (optionEwallet) optionEwallet.classList.toggle('selected', method === 'ewallet');
+    if (panel) panel.classList.toggle('visible', method === 'ewallet');
   }
 
-  // ── Wallet phone load ─────────────────────────────────────────
   async function loadWalletPhone() {
+    if (!supabaseClient) return;
     try {
       const { data, error } = await supabaseClient
         .from('settings')
@@ -503,25 +508,23 @@
         .single();
       if (!error && data) {
         walletPhone = data.value || '';
-        document.getElementById('walletPhoneDisplay').textContent = walletPhone || '—';
-      } else {
-        document.getElementById('walletPhoneDisplay').textContent = '—';
+        const display = document.getElementById('walletPhoneDisplay');
+        if (display) display.textContent = walletPhone || '—';
       }
-    } catch(e) {
-      document.getElementById('walletPhoneDisplay').textContent = '—';
-    }
+    } catch(e) {}
   }
 
   function copyWalletPhone() {
     if (!walletPhone) return;
     navigator.clipboard.writeText(walletPhone).catch(() => {});
     const btn = document.querySelector('.copy-btn');
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(() => { btn.textContent = orig; }, 1500);
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
   }
 
-  // ── Proof preview ─────────────────────────────────────────────
   function previewProof(input) {
     const preview = document.getElementById('proofPreview');
     const img = document.getElementById('proofImg');
@@ -533,36 +536,38 @@
     }
   }
 
-  // ── Cart load ─────────────────────────────────────────────────
   function loadCheckout() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const total = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
 
     if (cart.length === 0) {
-      document.querySelector('.checkout-layout').innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 100px 0;"><h2>Your cart is empty</h2><br/><a href="index.html" class="btn-submit" style="max-width:300px; display:inline-block; text-decoration:none;">Go back to store</a></div>';
+      const layout = document.querySelector('.checkout-layout');
+      if (layout) layout.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 100px 0;"><h2>Your cart is empty</h2><br/><a href="index.html" class="btn-submit" style="max-width:300px; display:inline-block; text-decoration:none;">Go back to store</a></div>';
       return;
     }
 
     const itemsContainer = document.getElementById('checkoutItems');
-    itemsContainer.innerHTML = '';
-    cart.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'cart-item';
-      div.innerHTML = `<span>${item.name}</span><span>LE ${item.price.toLocaleString()}.00</span>`;
-      itemsContainer.appendChild(div);
-    });
+    if (itemsContainer) {
+      itemsContainer.innerHTML = '';
+      cart.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML = `<span>${item.name}</span><span>LE ${item.price.toLocaleString()}.00</span>`;
+        itemsContainer.appendChild(div);
+      });
+    }
 
-    document.getElementById('subtotalDisplay').textContent = `LE ${total.toLocaleString()}.00`;
-    document.getElementById('totalDisplay').textContent = `LE ${total.toLocaleString()}.00`;
+    const subtotalDisplay = document.getElementById('subtotalDisplay');
+    const totalDisplay = document.getElementById('totalDisplay');
+    if (subtotalDisplay) subtotalDisplay.textContent = `LE ${total.toLocaleString()}.00`;
+    if (totalDisplay) totalDisplay.textContent = `LE ${total.toLocaleString()}.00`;
   }
 
-  // ── Submit ────────────────────────────────────────────────────
   async function handleOrderComplete(e) {
     e.preventDefault();
     const t = translations[currentLang];
     const payment = document.querySelector('input[name="payment"]:checked').value;
 
-    // Validate e-wallet proof
     if (payment === 'ewallet') {
       const proofFile = document.getElementById('proofFile');
       if (!proofFile.files || !proofFile.files[0]) {
@@ -592,9 +597,8 @@
     const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0');
     const total = subtotal + shippingCost;
 
-    // Upload proof if ewallet
     let proofUrl = null;
-    if (payment === 'ewallet') {
+    if (payment === 'ewallet' && supabaseClient) {
       try {
         const file = document.getElementById('proofFile').files[0];
         const ext = file.name.split('.').pop();
@@ -607,24 +611,26 @@
       } catch(err) { console.warn('Proof upload failed:', err); }
     }
 
-    try {
-      const { data, error } = await supabaseClient
-        .from('orders')
-        .insert([{
-          customer_name: `${firstName} ${lastName}`,
-          phone: phone,
-          address: `${address}, ${governorateName}`,
-          governorate: governorateName,
-          payment_method: payment,
-          proof_url: proofUrl,
-          items: cart,
-          subtotal: subtotal,
-          shipping_cost: shippingCost,
-          total_price: total
-        }]);
-      if (error) throw error;
-    } catch (err) {
-      console.error('Order insert error:', err);
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('orders')
+          .insert([{
+            customer_name: `${firstName} ${lastName}`,
+            phone: phone,
+            address: `${address}, ${governorateName}`,
+            governorate: governorateName,
+            payment_method: payment,
+            proof_url: proofUrl,
+            items: cart,
+            subtotal: subtotal,
+            shipping_cost: shippingCost,
+            total_price: total
+          }]);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Order insert error:', err);
+      }
     }
 
     document.getElementById('successOverlay').style.display = 'flex';
@@ -636,11 +642,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     loadCheckout();
-    // Initialize governorates list before setting language
-    governorates = [...FALLBACK_GOVERNORATES];
     setLang(currentLang); 
-    
-    // Fetch live data in background
     loadGovernorates();
     loadWalletPhone();
   });
