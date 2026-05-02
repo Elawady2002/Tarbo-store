@@ -1155,7 +1155,7 @@
     `;
 
     card.querySelector('img').addEventListener('click', () => goToProduct(product, imageUrls));
-    card.querySelector('.quick-add button').addEventListener('click', (event) => addToCart(event.currentTarget, productName, safePrice));
+    card.querySelector('.quick-add button').addEventListener('click', (event) => addToCart(event.currentTarget, productName, safePrice, imageUrl));
     
     card.addEventListener('mouseenter', () => {
       const qa = card.querySelector('.quick-add');
@@ -1257,9 +1257,9 @@
     localStorage.setItem('cartTotal', cartTotalValue);
   }
 
-  function addToCart(btn, productName, price) {
+  function addToCart(btn, productName, price, imageUrl) {
     const numericPrice = parseFloat(price) || 0;
-    cart.push({ name: productName, price: numericPrice });
+    cart.push({ name: productName, price: numericPrice, image: imageUrl || '', quantity: 1 });
     updateCartUI();
     openCart();
     
