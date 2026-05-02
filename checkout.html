@@ -564,7 +564,7 @@
     const subtotalDisplay = document.getElementById('subtotalDisplay');
     const totalDisplay = document.getElementById('totalDisplay');
     if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
-    if (totalDisplay) totalDisplay.textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
+    if (totalDisplay) totalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
   }
 
   async function handleOrderComplete(e) {
@@ -613,24 +613,41 @@
         const ext = file.name.split('.').pop();
         const path = `proofs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: upErr } = await supabaseClient.storage.from('proofs').upload(path, file, { upsert: false });
-            payment_method: payment,
-            proof_url: proofUrl,
-            items: cart,
-            subtotal: subtotal,
-            shipping_cost: shippingCost,
-            total_price: total
-          }]);
-        if (error) throw error;
-      } catch (err) {
-        console.error('Order insert error:', err);
+        if (upErr) throw new Error(`Proof upload failed: ${upErr.message}`);
+        
+        const { data: urlData } = supabaseClient.storage.from('proofs').getPublicUrl(path);
+        proofUrl = urlData?.publicUrl || null;
       }
-    }
 
-    document.getElementById('successOverlay').style.display = 'flex';
-    localStorage.removeItem('cart');
-    localStorage.removeItem('cartTotal');
-    submitBtn.textContent = originalText;
-    submitBtn.disabled = false;
+      const { data, error } = await supabaseClient
+        .from('orders')
+        .insert([{
+          customer_name: `${firstName} ${lastName}`,
+          phone: phone,
+          address: `${address}, ${governorateName}`,
+          governorate: governorateName,
+          payment_method: payment,
+          proof_url: proofUrl,
+          items: cart,
+          subtotal: subtotal,
+          shipping_cost: shippingCost,
+          total_price: total,
+          status: 'pending'
+        }]);
+      
+      if (error) throw error;
+
+      // Success
+      document.getElementById('successOverlay').style.display = 'flex';
+      localStorage.removeItem('cart');
+      localStorage.removeItem('cartTotal');
+    } catch (err) {
+      console.error('Order error:', err);
+      alert(currentLang === 'ar' ? `حدث خطأ أثناء تسجيل الطلب: ${err.message}` : `Error placing order: ${err.message}`);
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
