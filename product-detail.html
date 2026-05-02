@@ -545,7 +545,19 @@
       const itemName = `${currentProductName} (Size: ${selectedSize})`;
       const numericPrice = parseFloat(currentProductPrice) || 0;
       
-      cart.push({ name: itemName, price: numericPrice });
+      let imageUrl = '';
+      const imgEl = document.getElementById('productImage');
+      if (imgEl && imgEl.src) {
+        imageUrl = imgEl.src;
+      }
+      
+      cart.push({ 
+        name: currentProductName, 
+        price: numericPrice,
+        size: selectedSize,
+        image: imageUrl,
+        quantity: 1
+      });
       
       // Calculate total correctly from array
       const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
