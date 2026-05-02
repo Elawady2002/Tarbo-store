@@ -396,6 +396,37 @@
   }
 
   // ── Governorates ──────────────────────────────────────────────
+  const FALLBACK_GOVERNORATES = [
+    {id:'cairo',    name_ar:'القاهرة',       name_en:'Cairo',         shipping_price:50},
+    {id:'giza',     name_ar:'الجيزة',        name_en:'Giza',          shipping_price:50},
+    {id:'alex',     name_ar:'الإسكندرية',    name_en:'Alexandria',    shipping_price:60},
+    {id:'qalyubia', name_ar:'القليوبية',     name_en:'Qalyubia',      shipping_price:55},
+    {id:'sharqia',  name_ar:'الشرقية',       name_en:'Sharqia',       shipping_price:60},
+    {id:'gharbia',  name_ar:'الغربية',       name_en:'Gharbia',       shipping_price:60},
+    {id:'menofia',  name_ar:'المنوفية',      name_en:'Menofia',       shipping_price:60},
+    {id:'dakahlia', name_ar:'الدقهلية',      name_en:'Dakahlia',      shipping_price:65},
+    {id:'beheira',  name_ar:'البحيرة',       name_en:'Beheira',       shipping_price:65},
+    {id:'kafr',     name_ar:'كفر الشيخ',    name_en:'Kafr El Sheikh', shipping_price:65},
+    {id:'damietta', name_ar:'دمياط',         name_en:'Damietta',      shipping_price:65},
+    {id:'portsaid', name_ar:'بورسعيد',       name_en:'Port Said',     shipping_price:65},
+    {id:'ismailia', name_ar:'الإسماعيلية',  name_en:'Ismailia',      shipping_price:65},
+    {id:'suez',     name_ar:'السويس',        name_en:'Suez',          shipping_price:65},
+    {id:'fayoum',   name_ar:'الفيوم',        name_en:'Faiyum',        shipping_price:70},
+    {id:'benisuef', name_ar:'بني سويف',      name_en:'Beni Suef',     shipping_price:70},
+    {id:'minya',    name_ar:'المنيا',        name_en:'Minya',         shipping_price:75},
+    {id:'asyut',    name_ar:'أسيوط',         name_en:'Asyut',         shipping_price:75},
+    {id:'sohag',    name_ar:'سوهاج',         name_en:'Sohag',         shipping_price:80},
+    {id:'qena',     name_ar:'قنا',           name_en:'Qena',          shipping_price:80},
+    {id:'luxor',    name_ar:'الأقصر',        name_en:'Luxor',         shipping_price:85},
+    {id:'aswan',    name_ar:'أسوان',         name_en:'Aswan',         shipping_price:85},
+    {id:'redsea',   name_ar:'البحر الأحمر', name_en:'Red Sea',       shipping_price:90},
+    {id:'newvalley',name_ar:'الوادي الجديد',name_en:'New Valley',    shipping_price:90},
+    {id:'matruh',   name_ar:'مطروح',         name_en:'Matruh',        shipping_price:90},
+    {id:'northsin', name_ar:'شمال سيناء',   name_en:'North Sinai',   shipping_price:90},
+    {id:'southsin', name_ar:'جنوب سيناء',   name_en:'South Sinai',   shipping_price:90},
+    {id:'sadat',    name_ar:'السادات',       name_en:'Sadat City',    shipping_price:65},
+  ];
+
   async function loadGovernorates() {
     try {
       const { data, error } = await supabaseClient
@@ -404,8 +435,13 @@
         .order('name_en', { ascending: true });
       if (!error && data && data.length) {
         governorates = data;
+      } else {
+        // Fallback to hardcoded list if DB not ready
+        governorates = FALLBACK_GOVERNORATES;
       }
-    } catch(e) {}
+    } catch(e) {
+      governorates = FALLBACK_GOVERNORATES;
+    }
     populateGovernorates();
   }
 
