@@ -374,8 +374,8 @@
   let currentLang = localStorage.getItem('checkoutLang') || 'en';
   let shippingCost = 0;
   let walletPhone = '';
-  // Initialized with fallback so dropdown renders immediately
-  let governorates = [];
+  // Initialized with fallback IMMEDIATELY so it's ready before any function runs
+  let governorates = []; 
 
   function setLang(lang) {
     currentLang = lang;
@@ -429,10 +429,12 @@
   ];
 
   async function loadGovernorates() {
-    // Show fallback immediately — don't wait for network
-    governorates = [...FALLBACK_GOVERNORATES];
-    populateGovernorates();
-    // Then try to fetch real data from Supabase and refresh if available
+    // If we don't have governorates yet, use fallback
+    if (!governorates.length) {
+      governorates = [...FALLBACK_GOVERNORATES];
+      populateGovernorates();
+    }
+
     try {
       const { data, error } = await supabaseClient
         .from('governorates')
@@ -440,9 +442,12 @@
         .order('name_en', { ascending: true });
       if (!error && data && data.length) {
         governorates = data;
-        populateGovernorates(); // re-render with real prices
+        populateGovernorates(); // Update with live prices
       }
-    } catch(e) { /* keep fallback */ }
+    } catch(e) {
+      if (!governorates.length) governorates = [...FALLBACK_GOVERNORATES];
+      populateGovernorates();
+    }
   }
 
   function populateGovernorates() {
@@ -629,11 +634,15 @@
     submitBtn.disabled = false;
   }
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', () => {
     loadCheckout();
-    await loadGovernorates();
+    // Initialize governorates list before setting language
+    governorates = [...FALLBACK_GOVERNORATES];
+    setLang(currentLang); 
+    
+    // Fetch live data in background
+    loadGovernorates();
     loadWalletPhone();
-    setLang(currentLang);
   });
 </script>
 
