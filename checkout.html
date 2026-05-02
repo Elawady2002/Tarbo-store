@@ -372,9 +372,10 @@
   };
 
   let currentLang = localStorage.getItem('checkoutLang') || 'en';
-  let governorates = [];
   let shippingCost = 0;
   let walletPhone = '';
+  // Initialized with fallback so dropdown renders immediately
+  let governorates = [];
 
   function setLang(lang) {
     currentLang = lang;
@@ -428,6 +429,10 @@
   ];
 
   async function loadGovernorates() {
+    // Show fallback immediately — don't wait for network
+    governorates = [...FALLBACK_GOVERNORATES];
+    populateGovernorates();
+    // Then try to fetch real data from Supabase and refresh if available
     try {
       const { data, error } = await supabaseClient
         .from('governorates')
@@ -435,14 +440,9 @@
         .order('name_en', { ascending: true });
       if (!error && data && data.length) {
         governorates = data;
-      } else {
-        // Fallback to hardcoded list if DB not ready
-        governorates = FALLBACK_GOVERNORATES;
+        populateGovernorates(); // re-render with real prices
       }
-    } catch(e) {
-      governorates = FALLBACK_GOVERNORATES;
-    }
-    populateGovernorates();
+    } catch(e) { /* keep fallback */ }
   }
 
   function populateGovernorates() {
@@ -475,7 +475,7 @@
   }
 
   function recalcTotal() {
-    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0');
+    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
     document.getElementById('subtotalDisplay').textContent = `LE ${subtotal.toLocaleString()}.00`;
     document.getElementById('totalDisplay').textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
   }
@@ -531,7 +531,7 @@
   // ── Cart load ─────────────────────────────────────────────────
   function loadCheckout() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const total = parseFloat(localStorage.getItem('cartTotal') || '0');
+    const total = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
 
     if (cart.length === 0) {
       document.querySelector('.checkout-layout').innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 100px 0;"><h2>Your cart is empty</h2><br/><a href="index.html" class="btn-submit" style="max-width:300px; display:inline-block; text-decoration:none;">Go back to store</a></div>';
