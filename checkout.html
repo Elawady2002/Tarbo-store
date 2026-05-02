@@ -629,9 +629,9 @@
     submitBtn.disabled = false;
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     loadCheckout();
-    loadGovernorates();
+    await loadGovernorates();
     loadWalletPhone();
     setLang(currentLang);
   });
