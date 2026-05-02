@@ -740,8 +740,9 @@
       <a href="#catalog">All Products</a>
     </nav>
 
+    </div>
     <div class="header-icons">
-      <button onclick="openSearch()" title="Search">
+      <button onclick="openSearch()" title="Search" id="searchBtn">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
@@ -751,7 +752,12 @@
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
       </button>
-      <button class="cart-btn" onclick="openCart()" title="Cart">
+      <!-- Language Toggle -->
+      <div style="display:flex;border:1px solid #e5e5e5;border-radius:16px;overflow:hidden;">
+        <button onclick="setStoreLang('en')" id="storeBtnEn" style="padding:5px 10px;border:none;background:#111;color:#fff;font-size:11px;font-weight:700;cursor:pointer;border-radius:16px;">EN</button>
+        <button onclick="setStoreLang('ar')" id="storeBtnAr" style="padding:5px 10px;border:none;background:none;color:#555;font-size:11px;font-weight:700;cursor:pointer;">AR</button>
+      </div>
+      <button class="cart-btn" onclick="openCart()" title="Cart" id="cartBtn">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
@@ -877,10 +883,10 @@
     <div id="cartItems"></div>
     <div id="cartFooter" style="margin-top:24px; display:none;">
       <div style="display:flex; justify-content:space-between; margin-bottom:16px; font-weight:600;">
-        <span>Total</span>
+        <span id="cartTotalLabel">Total</span>
         <span id="cartTotal">LE 0.00</span>
       </div>
-      <button class="btn-secondary" onclick="window.location.href='checkout.html'">Checkout</button>
+      <button class="btn-secondary" id="checkoutBtn" onclick="window.location.href='checkout.html'">Checkout</button>
     </div>
   </div>
 </div>
@@ -893,6 +899,101 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ── Language switcher ─────────────────────────────────────────
+  const storeTranslations = {
+    en: {
+      navHome:'Home', navCatalog:'Catalog', navContact:'Contact', navAll:'All Products',
+      heroBtn:'Shop Now', productsTitle:'Products', viewAll:'View all',
+      bannerTitle:'New Drop – Limited Stock', bannerSub:'Premium streetwear crafted for every occasion',
+      bannerBtn:'Explore Collection', nlTitle:'Get Exclusive Access',
+      nlSub:'Subscribe for early drops, deals, and new arrivals.', nlBtn:'Subscribe',
+      cartEmpty:'Your cart is empty', cartTotal:'Total', checkout:'Checkout',
+      continueShopping:'Continue Shopping', addToCart:'Add to Cart', addedBtn:'Added ✓',
+      cartTitle:'Cart'
+    },
+    ar: {
+      navHome:'الرئيسية', navCatalog:'المنتجات', navContact:'تواصل معنا', navAll:'كل المنتجات',
+      heroBtn:'تسوق الآن', productsTitle:'المنتجات', viewAll:'عرض الكل',
+      bannerTitle:'وصل جديد – كميات محدودة', bannerSub:'ملابس ستريت وير عالية الجودة',
+      bannerBtn:'اكتشف المجموعة', nlTitle:'احصل على عروض حصرية',
+      nlSub:'اشترك للحصول على أحدث المنتجات والعروض.', nlBtn:'اشترك',
+      cartEmpty:'سلة التسوق فارغة', cartTotal:'الإجمالي', checkout:'إتمام الطلب',
+      continueShopping:'متابعة التسوق', addToCart:'أضف للسلة', addedBtn:'تمت الإضافة ✓',
+      cartTitle:'السلة'
+    }
+  };
+  let storeLang = localStorage.getItem('storeLang') || 'en';
+
+  function setStoreLang(lang) {
+    storeLang = lang;
+    localStorage.setItem('storeLang', lang);
+    localStorage.setItem('checkoutLang', lang);
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    document.body.style.fontFamily = lang === 'ar' ? "'Cairo', 'Inter', sans-serif" : "'Inter', sans-serif";
+
+    const t = storeTranslations[lang];
+    const setBtnActive = (enId, arId, active) => {
+      const en = document.getElementById(enId); const ar = document.getElementById(arId);
+      if (en) { en.style.background = active === 'en' ? '#111' : 'none'; en.style.color = active === 'en' ? '#fff' : '#555'; }
+      if (ar) { ar.style.background = active === 'ar' ? '#111' : 'none'; ar.style.color = active === 'ar' ? '#fff' : '#555'; }
+    };
+    setBtnActive('storeBtnEn', 'storeBtnAr', lang);
+
+    const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    setText('cartTotalLabel', t.cartTotal);
+    setText('checkoutBtn', t.checkout);
+
+    const cartEmptyEl = document.querySelector('.cart-empty p');
+    if (cartEmptyEl) cartEmptyEl.textContent = t.cartEmpty;
+
+    const drawerHeader = document.querySelector('.drawer-header h3');
+    if (drawerHeader) {
+      const count = document.getElementById('cartCount').textContent;
+      drawerHeader.textContent = `${t.cartTitle} (${count})`;
+    }
+
+    // Nav links
+    const navLinks = document.querySelectorAll('.nav-desktop a');
+    const navKeys = ['navHome','navCatalog','navContact','navAll'];
+    navLinks.forEach((a, i) => { if (navKeys[i]) a.textContent = t[navKeys[i]]; });
+
+    // Section title
+    const secTitle = document.querySelector('.section-title');
+    if (secTitle) secTitle.textContent = t.productsTitle;
+    const viewAllEl = document.querySelector('.view-all');
+    if (viewAllEl) viewAllEl.textContent = t.viewAll;
+
+    // Banner
+    const bannerH2 = document.querySelector('.banner-strip h2');
+    const bannerP  = document.querySelector('.banner-strip p');
+    const bannerA  = document.querySelector('.banner-strip a');
+    if (bannerH2) bannerH2.textContent = t.bannerTitle;
+    if (bannerP)  bannerP.textContent  = t.bannerSub;
+    if (bannerA)  bannerA.textContent  = t.bannerBtn;
+
+    // Newsletter
+    const nlH3 = document.querySelector('.newsletter h3');
+    const nlP  = document.querySelector('.newsletter p');
+    const nlBtn = document.querySelector('.newsletter-form button');
+    if (nlH3) nlH3.textContent = t.nlTitle;
+    if (nlP)  nlP.textContent  = t.nlSub;
+    if (nlBtn) nlBtn.textContent = t.nlBtn;
+
+    // Add-to-cart buttons
+    document.querySelectorAll('.quick-add button').forEach(btn => {
+      if (btn.textContent !== t.addedBtn) btn.textContent = t.addToCart;
+    });
+
+    // Continue shopping
+    const contBtn = document.querySelector('.cart-empty a');
+    if (contBtn) contBtn.textContent = t.continueShopping;
+  }
+
+  // Apply on load
+  document.addEventListener('DOMContentLoaded', () => setStoreLang(storeLang));
+</script>
 <script>
   /**
    * STORE CHANGES SUMMARY:

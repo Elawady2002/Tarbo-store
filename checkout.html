@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr" id="htmlRoot">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout – Tarbo Store</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -18,8 +18,10 @@
       --gray-200: #e5e5e5;
       --gray-400: #999999;
       --gray-600: #555555;
+      --green: #2d7a2d;
       --red: #d92b2b;
-      --font: 'Inter', sans-serif;
+      --accent: #111111;
+      --font: 'Inter', 'Cairo', sans-serif;
     }
 
     body {
@@ -29,27 +31,42 @@
       line-height: 1.5;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
 
     .header-minimal {
       text-align: center;
       margin-bottom: 40px;
       padding-bottom: 20px;
       border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
     }
 
-    .logo {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      text-decoration: none;
-      color: var(--black);
+    .logo { font-size: 24px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--black); }
+
+    .lang-toggle {
+      display: flex;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      overflow: hidden;
+      position: absolute;
+      right: 24px;
+      top: 40px;
     }
+    .lang-btn {
+      padding: 6px 14px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-600);
+      transition: background .2s, color .2s;
+    }
+    .lang-btn.active { background: var(--black); color: var(--white); border-radius: 20px; }
 
     .checkout-layout {
       display: grid;
@@ -58,186 +75,149 @@
     }
 
     @media (max-width: 850px) {
-      .checkout-layout {
-        grid-template-columns: 1fr;
-      }
-      .order-summary {
-        order: -1;
-        position: static;
-        margin-bottom: 24px;
-      }
+      .checkout-layout { grid-template-columns: 1fr; }
+      .order-summary { order: -1; position: static; margin-bottom: 24px; }
+      .lang-toggle { position: static; }
     }
 
-    h2 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 24px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.05em; }
 
-    .form-section {
-      margin-bottom: 40px;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
+    .form-section { margin-bottom: 40px; }
+    .form-group { margin-bottom: 16px; }
 
     .form-group label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--gray-600);
-      margin-bottom: 6px;
-      text-transform: uppercase;
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--gray-600); margin-bottom: 6px; text-transform: uppercase;
     }
 
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 14px;
-      transition: border-color .2s;
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 12px; border: 1px solid var(--gray-200);
+      border-radius: 4px; font-family: inherit; font-size: 14px; transition: border-color .2s;
+      background: white;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--black);
     }
 
-    .form-group input:focus {
-      outline: none;
-      border-color: var(--black);
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    .payment-options {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    /* Payment */
+    .payment-options { display: flex; flex-direction: column; gap: 12px; }
 
     .payment-option {
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--gray-200); padding: 16px; border-radius: 4px;
+      cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background .2s, border-color .2s;
+    }
+    .payment-option:hover { background: var(--gray-50); }
+    .payment-option.selected { border-color: var(--black); background: var(--gray-50); }
+    .payment-option input { accent-color: var(--black); }
+
+    .payment-icon-label { display: flex; align-items: center; gap: 10px; }
+    .payment-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px;
+      background: var(--gray-100); color: var(--gray-600);
+    }
+
+    /* E-wallet section */
+    .ewallet-details {
+      display: none;
+      margin-top: 16px;
       padding: 16px;
-      border-radius: 4px;
-      cursor: pointer;
+      background: #f8faff;
+      border: 1px solid #d0e0ff;
+      border-radius: 8px;
+    }
+    .ewallet-details.visible { display: block; }
+    .wallet-phone-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      transition: background .2s;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 1px solid #d0e0ff;
+      margin-bottom: 14px;
     }
+    .wallet-phone-number {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--black);
+      letter-spacing: 0.05em;
+    }
+    .copy-btn {
+      border: 1px solid var(--gray-200); background: white; padding: 6px 12px;
+      font-size: 12px; font-weight: 600; border-radius: 4px; cursor: pointer;
+      color: var(--black); transition: background .2s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--gray-100); }
+    .ewallet-note { font-size: 12px; color: var(--gray-600); margin-bottom: 12px; line-height: 1.5; }
+    .upload-proof-label {
+      display: block; font-size: 12px; font-weight: 600; color: var(--black);
+      margin-bottom: 8px;
+    }
+    .upload-proof-input {
+      width: 100%; padding: 10px; border: 1px dashed var(--gray-400);
+      border-radius: 4px; font-size: 13px; cursor: pointer; background: white;
+    }
+    .proof-preview { margin-top: 10px; display: none; }
+    .proof-preview img { max-width: 120px; max-height: 120px; border-radius: 6px; border: 1px solid var(--gray-200); }
 
-    .payment-option:hover {
-      background: var(--gray-50);
-    }
+    /* Order summary */
+    .order-summary { background: var(--gray-50); padding: 32px; border-radius: 8px; align-self: start; }
 
-    .payment-option input {
-      accent-color: var(--black);
-    }
-
-    .order-summary {
-      background: var(--gray-50);
-      padding: 32px;
-      border-radius: 8px;
-      align-self: start;
-    }
-
-    .cart-items {
-      margin-bottom: 24px;
-    }
+    .cart-items { margin-bottom: 24px; }
 
     .cart-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--gray-200);
-      font-size: 14px;
+      display: flex; justify-content: space-between; padding: 12px 0;
+      border-bottom: 1px solid var(--gray-200); font-size: 14px;
     }
 
-    .summary-totals {
-      margin-top: 24px;
-    }
+    .summary-totals { margin-top: 24px; }
 
     .total-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 14px;
+      display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;
     }
-
     .total-row.grand-total {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 2px solid var(--gray-200);
-      font-weight: 700;
-      font-size: 18px;
+      margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--gray-200);
+      font-weight: 700; font-size: 18px;
     }
 
     .btn-submit {
-      width: 100%;
-      background: var(--black);
-      color: var(--white);
-      border: none;
-      padding: 18px;
-      font-size: 14px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      margin-top: 32px;
-      transition: background .2s;
+      width: 100%; background: var(--black); color: var(--white); border: none;
+      padding: 18px; font-size: 14px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; cursor: pointer; margin-top: 32px; transition: background .2s;
+      border-radius: 4px;
     }
+    .btn-submit:hover { background: #333; }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .btn-submit:hover {
-      background: #333;
-    }
-
-    /* Success Modal */
+    /* Success modal */
     #successOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none;
+      align-items: center; justify-content: center; z-index: 1000; padding: 20px;
     }
-
     .success-modal {
-      background: var(--white);
-      padding: 60px 40px;
-      max-width: 500px;
-      width: 100%;
-      text-align: center;
-      border-radius: 8px;
+      background: var(--white); padding: 60px 40px; max-width: 500px;
+      width: 100%; text-align: center; border-radius: 8px;
     }
+    .success-icon { font-size: 64px; margin-bottom: 20px; }
+    .success-modal h3 { font-size: 24px; margin-bottom: 12px; }
+    .success-modal p { color: var(--gray-600); margin-bottom: 32px; }
 
-    .success-modal svg {
-      width: 64px;
-      height: 64px;
-      color: #2d7a2d;
-      margin-bottom: 24px;
-    }
-
-    .success-modal h3 {
-      font-size: 24px;
-      margin-bottom: 12px;
-    }
-
-    .success-modal p {
-      color: var(--gray-600);
-      margin-bottom: 32px;
-    }
+    /* RTL support */
+    body.rtl { font-family: 'Cairo', 'Inter', sans-serif; direction: rtl; }
+    body.rtl .lang-toggle { right: auto; left: 24px; }
   </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" style="position:relative;">
+  <div class="lang-toggle" id="langToggle">
+    <button class="lang-btn active" onclick="setLang('en')" id="btnEn">EN</button>
+    <button class="lang-btn" onclick="setLang('ar')" id="btnAr">AR</button>
+  </div>
+
   <div class="header-minimal">
     <a href="index.html" class="logo">TARBO STORE</a>
   </div>
@@ -246,53 +226,74 @@
     <div class="checkout-layout">
       <!-- Left: Details -->
       <div class="checkout-details">
-        <div class="form-section">
-          <h2>Contact Information</h2>
-          <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="email" placeholder="email@example.com" required />
-          </div>
-        </div>
 
+        <!-- Shipping Address -->
         <div class="form-section">
-          <h2>Shipping Address</h2>
+          <h2 id="lblShipping">Shipping Address</h2>
           <div class="grid-2">
             <div class="form-group">
-              <label>First Name</label>
+              <label id="lblFirst">First Name</label>
               <input type="text" id="firstName" placeholder="John" required />
             </div>
             <div class="form-group">
-              <label>Last Name</label>
+              <label id="lblLast">Last Name</label>
               <input type="text" id="lastName" placeholder="Doe" required />
             </div>
           </div>
           <div class="form-group">
-            <label>Street Address</label>
+            <label id="lblPhone">Phone Number</label>
+            <input type="tel" id="phone" placeholder="+20 123 456 7890" required />
+          </div>
+          <div class="form-group">
+            <label id="lblAddr">Street Address</label>
             <input type="text" id="address" placeholder="123 Street Name" required />
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label>City</label>
-              <input type="text" id="city" placeholder="Cairo" required />
-            </div>
-            <div class="form-group">
-              <label>Phone Number</label>
-              <input type="tel" id="phone" placeholder="+20 123 456 7890" required />
-            </div>
+          <div class="form-group">
+            <label id="lblGov">Governorate</label>
+            <select id="governorate" required onchange="updateShipping()">
+              <option value="" id="lblSelectGov">Select governorate…</option>
+            </select>
           </div>
         </div>
 
+        <!-- Payment -->
         <div class="form-section">
-          <h2>Payment Method</h2>
+          <h2 id="lblPayment">Payment Method</h2>
           <div class="payment-options">
-            <label class="payment-option">
-              <input type="radio" name="payment" value="cod" checked />
-              <span>Cash on Delivery</span>
+
+            <label class="payment-option selected" id="optionCOD">
+              <input type="radio" name="payment" value="cod" checked onchange="switchPayment('cod')" />
+              <span class="payment-icon-label">
+                <span>💵</span>
+                <span id="lblCOD">Cash on Delivery</span>
+              </span>
             </label>
-            <label class="payment-option">
-              <input type="radio" name="payment" value="card" />
-              <span>Credit / Debit Card</span>
+
+            <label class="payment-option" id="optionEwallet">
+              <input type="radio" name="payment" value="ewallet" onchange="switchPayment('ewallet')" />
+              <span class="payment-icon-label">
+                <span>📱</span>
+                <span id="lblEwallet">E-Wallet Transfer</span>
+                <span class="payment-badge">Vodafone / InstaPay</span>
+              </span>
             </label>
+
+          </div>
+
+          <!-- E-wallet details panel -->
+          <div class="ewallet-details" id="ewalletDetails">
+            <p class="ewallet-note" id="lblEwalletNote">
+              Transfer the total amount to the following number, then upload proof of transfer:
+            </p>
+            <div class="wallet-phone-row">
+              <span class="wallet-phone-number" id="walletPhoneDisplay">Loading…</span>
+              <button type="button" class="copy-btn" onclick="copyWalletPhone()" id="lblCopy">Copy</button>
+            </div>
+            <label class="upload-proof-label" id="lblProof">Upload Transfer Proof</label>
+            <input type="file" class="upload-proof-input" id="proofFile" accept="image/*,application/pdf" onchange="previewProof(this)" />
+            <div class="proof-preview" id="proofPreview">
+              <img id="proofImg" src="" alt="Proof" />
+            </div>
           </div>
         </div>
 
@@ -301,22 +302,19 @@
 
       <!-- Right: Summary -->
       <div class="order-summary">
-        <h2>Order Summary</h2>
-        <div id="checkoutItems" class="cart-items">
-          <!-- Items will be injected here -->
-        </div>
-        
+        <h2 id="lblSummary">Order Summary</h2>
+        <div id="checkoutItems" class="cart-items"></div>
         <div class="summary-totals">
           <div class="total-row">
-            <span>Subtotal</span>
+            <span id="lblSubtotal">Subtotal</span>
             <span id="subtotalDisplay">LE 0.00</span>
           </div>
           <div class="total-row">
-            <span>Shipping</span>
-            <span>LE 50.00</span>
+            <span id="lblShippingRow">Shipping</span>
+            <span id="shippingDisplay">—</span>
           </div>
           <div class="total-row grand-total">
-            <span>Total</span>
+            <span id="lblTotal">Total</span>
             <span id="totalDisplay">LE 0.00</span>
           </div>
         </div>
@@ -325,14 +323,13 @@
   </form>
 </div>
 
-<div id="successOverlay">
+<!-- Success Modal -->
+<div id="successOverlay" style="display:none; align-items:center; justify-content:center;">
   <div class="success-modal">
-    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-    </svg>
-    <h3>Order Placed!</h3>
-    <p>Thank you for shopping with Tarbo Store. Your order has been received and is being processed.</p>
-    <button class="btn-submit" style="margin-top:0;" onclick="window.location.href='index.html'">Return to Home</button>
+    <div class="success-icon">✅</div>
+    <h3 id="lblSuccess">Order Placed!</h3>
+    <p id="lblSuccessMsg">Thank you for shopping with Tarbo Store. Your order has been received and is being processed.</p>
+    <button class="btn-submit" style="margin-top:0;" onclick="window.location.href='index.html'" id="lblReturnHome">Return to Home</button>
   </div>
 </div>
 
@@ -342,10 +339,164 @@
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmlkeGJob29hdmN5bnR0Ym1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxODk5MTgsImV4cCI6MjA5Mjc2NTkxOH0.HyksCx9ZVhZNdXfgNLiH3V9HnZUDh8I3KFbM_ovUn8o';
   const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+  // ── Language ──────────────────────────────────────────────────
+  const translations = {
+    en: {
+      lblShipping: 'Shipping Address', lblFirst: 'First Name', lblLast: 'Last Name',
+      lblPhone: 'Phone Number', lblAddr: 'Street Address', lblGov: 'Governorate',
+      lblSelectGov: 'Select governorate…', lblPayment: 'Payment Method',
+      lblCOD: 'Cash on Delivery', lblEwallet: 'E-Wallet Transfer',
+      lblEwalletNote: 'Transfer the total amount to the following number, then upload proof of transfer:',
+      lblCopy: 'Copy', lblProof: 'Upload Transfer Proof',
+      lblSummary: 'Order Summary', lblSubtotal: 'Subtotal',
+      lblShippingRow: 'Shipping', lblTotal: 'Total',
+      submitBtn: 'Complete Order', lblSuccess: 'Order Placed!',
+      lblSuccessMsg: 'Thank you for shopping with Tarbo Store. Your order has been received and is being processed.',
+      lblReturnHome: 'Return to Home', shippingSelect: 'Select a governorate to see shipping cost',
+      shippingFree: 'Free', processingText: 'Processing…'
+    },
+    ar: {
+      lblShipping: 'عنوان الشحن', lblFirst: 'الاسم الأول', lblLast: 'اسم العائلة',
+      lblPhone: 'رقم الهاتف', lblAddr: 'العنوان بالتفصيل', lblGov: 'المحافظة',
+      lblSelectGov: 'اختر المحافظة…', lblPayment: 'طريقة الدفع',
+      lblCOD: 'الدفع عند الاستلام', lblEwallet: 'المحفظة الإلكترونية',
+      lblEwalletNote: 'حوّل المبلغ الإجمالي على الرقم التالي ثم ارفع إثبات التحويل:',
+      lblCopy: 'نسخ', lblProof: 'ارفع إثبات التحويل',
+      lblSummary: 'ملخص الطلب', lblSubtotal: 'المجموع الفرعي',
+      lblShippingRow: 'الشحن', lblTotal: 'الإجمالي',
+      submitBtn: 'تأكيد الطلب', lblSuccess: 'تم تسجيل طلبك!',
+      lblSuccessMsg: 'شكراً لتسوقك من Tarbo Store. تم استلام طلبك وجاري معالجته.',
+      lblReturnHome: 'العودة للمتجر', shippingSelect: 'اختر المحافظة لمعرفة تكلفة الشحن',
+      shippingFree: 'مجاني', processingText: 'جاري المعالجة…'
+    }
+  };
+
+  let currentLang = localStorage.getItem('checkoutLang') || 'en';
+  let governorates = [];
+  let shippingCost = 0;
+  let walletPhone = '';
+
+  function setLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('checkoutLang', lang);
+    document.getElementById('htmlRoot').setAttribute('lang', lang);
+    document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+    document.getElementById('btnAr').classList.toggle('active', lang === 'ar');
+    document.body.classList.toggle('rtl', lang === 'ar');
+
+    const t = translations[lang];
+    Object.keys(t).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = t[id];
+    });
+
+    // Re-populate governorate select
+    populateGovernorates();
+    updateShipping();
+  }
+
+  // ── Governorates ──────────────────────────────────────────────
+  async function loadGovernorates() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('governorates')
+        .select('*')
+        .order('name_en', { ascending: true });
+      if (!error && data && data.length) {
+        governorates = data;
+      }
+    } catch(e) {}
+    populateGovernorates();
+  }
+
+  function populateGovernorates() {
+    const sel = document.getElementById('governorate');
+    const t = translations[currentLang];
+    sel.innerHTML = `<option value="">${t.lblSelectGov}</option>`;
+    governorates.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.dataset.price = g.shipping_price || 0;
+      opt.textContent = currentLang === 'ar' ? (g.name_ar || g.name_en) : (g.name_en || g.name_ar);
+      sel.appendChild(opt);
+    });
+  }
+
+  function updateShipping() {
+    const sel = document.getElementById('governorate');
+    const opt = sel.options[sel.selectedIndex];
+    const t = translations[currentLang];
+    if (!opt || !opt.value) {
+      shippingCost = 0;
+      document.getElementById('shippingDisplay').textContent = t.shippingSelect;
+    } else {
+      shippingCost = parseFloat(opt.dataset.price) || 0;
+      document.getElementById('shippingDisplay').textContent = shippingCost === 0
+        ? t.shippingFree
+        : `LE ${shippingCost.toLocaleString()}.00`;
+    }
+    recalcTotal();
+  }
+
+  function recalcTotal() {
+    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0');
+    document.getElementById('subtotalDisplay').textContent = `LE ${subtotal.toLocaleString()}.00`;
+    document.getElementById('totalDisplay').textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
+  }
+
+  // ── Payment switching ─────────────────────────────────────────
+  function switchPayment(method) {
+    document.getElementById('optionCOD').classList.toggle('selected', method === 'cod');
+    document.getElementById('optionEwallet').classList.toggle('selected', method === 'ewallet');
+    const panel = document.getElementById('ewalletDetails');
+    panel.classList.toggle('visible', method === 'ewallet');
+  }
+
+  // ── Wallet phone load ─────────────────────────────────────────
+  async function loadWalletPhone() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('settings')
+        .select('value')
+        .eq('key', 'wallet_phone')
+        .single();
+      if (!error && data) {
+        walletPhone = data.value || '';
+        document.getElementById('walletPhoneDisplay').textContent = walletPhone || '—';
+      } else {
+        document.getElementById('walletPhoneDisplay').textContent = '—';
+      }
+    } catch(e) {
+      document.getElementById('walletPhoneDisplay').textContent = '—';
+    }
+  }
+
+  function copyWalletPhone() {
+    if (!walletPhone) return;
+    navigator.clipboard.writeText(walletPhone).catch(() => {});
+    const btn = document.querySelector('.copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }
+
+  // ── Proof preview ─────────────────────────────────────────────
+  function previewProof(input) {
+    const preview = document.getElementById('proofPreview');
+    const img = document.getElementById('proofImg');
+    if (input.files && input.files[0] && input.files[0].type.startsWith('image/')) {
+      img.src = URL.createObjectURL(input.files[0]);
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  // ── Cart load ─────────────────────────────────────────────────
   function loadCheckout() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const total = parseFloat(localStorage.getItem('cartTotal') || '0');
-    
+
     if (cart.length === 0) {
       document.querySelector('.checkout-layout').innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 100px 0;"><h2>Your cart is empty</h2><br/><a href="index.html" class="btn-submit" style="max-width:300px; display:inline-block; text-decoration:none;">Go back to store</a></div>';
       return;
@@ -353,7 +504,6 @@
 
     const itemsContainer = document.getElementById('checkoutItems');
     itemsContainer.innerHTML = '';
-
     cart.forEach(item => {
       const div = document.createElement('div');
       div.className = 'cart-item';
@@ -362,59 +512,93 @@
     });
 
     document.getElementById('subtotalDisplay').textContent = `LE ${total.toLocaleString()}.00`;
-    document.getElementById('totalDisplay').textContent = `LE ${(total + 50).toLocaleString()}.00`;
+    document.getElementById('totalDisplay').textContent = `LE ${total.toLocaleString()}.00`;
   }
 
+  // ── Submit ────────────────────────────────────────────────────
   async function handleOrderComplete(e) {
     e.preventDefault();
-    
+    const t = translations[currentLang];
+    const payment = document.querySelector('input[name="payment"]:checked').value;
+
+    // Validate e-wallet proof
+    if (payment === 'ewallet') {
+      const proofFile = document.getElementById('proofFile');
+      if (!proofFile.files || !proofFile.files[0]) {
+        alert(currentLang === 'ar' ? 'يرجى رفع إثبات التحويل' : 'Please upload transfer proof');
+        return;
+      }
+    }
+
+    const sel = document.getElementById('governorate');
+    if (!sel.value) {
+      alert(currentLang === 'ar' ? 'يرجى اختيار المحافظة' : 'Please select a governorate');
+      return;
+    }
+
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Processing...';
+    submitBtn.textContent = t.processingText;
     submitBtn.disabled = true;
 
-    const email = document.getElementById('email').value;
     const firstName = document.getElementById('firstName').value;
     const lastName = document.getElementById('lastName').value;
     const address = document.getElementById('address').value;
-    const city = document.getElementById('city').value;
+    const govOpt = sel.options[sel.selectedIndex];
+    const governorateName = govOpt ? govOpt.textContent : '';
     const phone = document.getElementById('phone').value;
-    const payment = document.querySelector('input[name="payment"]:checked').value;
-    
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const total = parseFloat(localStorage.getItem('cartTotal') || '0') + 50;
+    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0');
+    const total = subtotal + shippingCost;
+
+    // Upload proof if ewallet
+    let proofUrl = null;
+    if (payment === 'ewallet') {
+      try {
+        const file = document.getElementById('proofFile').files[0];
+        const ext = file.name.split('.').pop();
+        const path = `proofs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabaseClient.storage.from('proofs').upload(path, file, { upsert: false });
+        if (!upErr) {
+          const { data: urlData } = supabaseClient.storage.from('proofs').getPublicUrl(path);
+          proofUrl = urlData?.publicUrl || null;
+        }
+      } catch(err) { console.warn('Proof upload failed:', err); }
+    }
 
     try {
       const { data, error } = await supabaseClient
         .from('orders')
-        .insert([
-          { 
-            customer_name: `${firstName} ${lastName}`,
-            email: email,
-            phone: phone,
-            address: `${address}, ${city}`,
-            payment_method: payment,
-            items: cart,
-            total_price: total
-          }
-        ]);
-        
+        .insert([{
+          customer_name: `${firstName} ${lastName}`,
+          phone: phone,
+          address: `${address}, ${governorateName}`,
+          governorate: governorateName,
+          payment_method: payment,
+          proof_url: proofUrl,
+          items: cart,
+          subtotal: subtotal,
+          shipping_cost: shippingCost,
+          total_price: total
+        }]);
       if (error) throw error;
     } catch (err) {
-      console.error('Error inserting order to Supabase:', err);
-      // Proceed to show success anyway so user experience isn't blocked 
-      // if DB table isn't created yet by the admin.
+      console.error('Order insert error:', err);
     }
 
     document.getElementById('successOverlay').style.display = 'flex';
     localStorage.removeItem('cart');
     localStorage.removeItem('cartTotal');
-    
     submitBtn.textContent = originalText;
     submitBtn.disabled = false;
   }
 
-  document.addEventListener('DOMContentLoaded', loadCheckout);
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCheckout();
+    loadGovernorates();
+    loadWalletPhone();
+    setLang(currentLang);
+  });
 </script>
 
 </body>
