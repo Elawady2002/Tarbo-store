@@ -482,11 +482,15 @@
   }
 
   function recalcTotal() {
-    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
     const subtotalDisplay = document.getElementById('subtotalDisplay');
     const totalDisplay = document.getElementById('totalDisplay');
     if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
     if (totalDisplay) totalDisplay.textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
+    
+    // Sync back to localStorage just in case
+    localStorage.setItem('cartTotal', subtotal);
   }
 
   function switchPayment(method) {
@@ -538,7 +542,7 @@
 
   function loadCheckout() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const total = parseFloat(localStorage.getItem('cartTotal') || '0') || 0;
+    const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
 
     if (cart.length === 0) {
       const layout = document.querySelector('.checkout-layout');
@@ -552,15 +556,15 @@
       cart.forEach(item => {
         const div = document.createElement('div');
         div.className = 'cart-item';
-        div.innerHTML = `<span>${item.name}</span><span>LE ${item.price.toLocaleString()}.00</span>`;
+        div.innerHTML = `<span>${item.name}</span><span>LE ${(parseFloat(item.price) || 0).toLocaleString()}.00</span>`;
         itemsContainer.appendChild(div);
       });
     }
 
     const subtotalDisplay = document.getElementById('subtotalDisplay');
     const totalDisplay = document.getElementById('totalDisplay');
-    if (subtotalDisplay) subtotalDisplay.textContent = `LE ${total.toLocaleString()}.00`;
-    if (totalDisplay) totalDisplay.textContent = `LE ${total.toLocaleString()}.00`;
+    if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
+    if (totalDisplay) totalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
   }
 
   async function handleOrderComplete(e) {

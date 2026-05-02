@@ -534,18 +534,21 @@
     }
 
     function handleAddToCart() {
+      const currentLang = localStorage.getItem('storeLang') || 'en';
       if (!selectedSize) {
-        alert('Please select a size first.');
+        alert(currentLang === 'ar' ? 'يرجى اختيار المقاس أولاً' : 'Please select a size first.');
         return;
       }
 
       // Add to localStorage cart
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      let total = parseFloat(localStorage.getItem('cartTotal') || '0');
-      
       const itemName = `${currentProductName} (Size: ${selectedSize})`;
-      cart.push({ name: itemName, price: currentProductPrice });
-      total += currentProductPrice;
+      const numericPrice = parseFloat(currentProductPrice) || 0;
+      
+      cart.push({ name: itemName, price: numericPrice });
+      
+      // Calculate total correctly from array
+      const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
 
       localStorage.setItem('cart', JSON.stringify(cart));
       localStorage.setItem('cartTotal', total);
