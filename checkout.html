@@ -630,8 +630,9 @@
         .insert([{
           customer_name: `${firstName} ${lastName}`,
           phone: phone,
-          customer_phone: phone, // Satisfy existing database constraint
+          customer_phone: phone, 
           address: `${address}, ${governorateName}`,
+          customer_address: `${address}, ${governorateName}`, // Satisfy database constraint
           governorate: governorateName,
           payment_method: payment,
           proof_url: proofUrl,
