@@ -564,13 +564,16 @@
     const subtotalDisplay = document.getElementById('subtotalDisplay');
     const totalDisplay = document.getElementById('totalDisplay');
     if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
-    if (totalDisplay) totalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
+    if (totalDisplay) totalDisplay.textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
   }
 
   async function handleOrderComplete(e) {
     e.preventDefault();
     const t = translations[currentLang];
-    const payment = document.querySelector('input[name="payment"]:checked').value;
+    
+    const paymentEl = document.querySelector('input[name="payment"]:checked');
+    if (!paymentEl) return;
+    const payment = paymentEl.value;
 
     if (payment === 'ewallet') {
       const proofFile = document.getElementById('proofFile');
@@ -591,39 +594,25 @@
     submitBtn.textContent = t.processingText;
     submitBtn.disabled = true;
 
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const address = document.getElementById('address').value;
-    const govOpt = sel.options[sel.selectedIndex];
-    const governorateName = govOpt ? govOpt.textContent : '';
-    const phone = document.getElementById('phone').value;
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const subtotal = parseFloat(localStorage.getItem('cartTotal') || '0');
-    const total = subtotal + shippingCost;
+    try {
+      const firstName = document.getElementById('firstName').value;
+      const lastName = document.getElementById('lastName').value;
+      const address = document.getElementById('address').value;
+      const govOpt = sel.options[sel.selectedIndex];
+      const governorateName = govOpt ? govOpt.textContent : '';
+      const phone = document.getElementById('phone').value;
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+      const total = subtotal + shippingCost;
 
-    let proofUrl = null;
-    if (payment === 'ewallet' && supabaseClient) {
-      try {
+      if (!supabaseClient) throw new Error("Supabase client not initialized");
+
+      let proofUrl = null;
+      if (payment === 'ewallet') {
         const file = document.getElementById('proofFile').files[0];
         const ext = file.name.split('.').pop();
         const path = `proofs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: upErr } = await supabaseClient.storage.from('proofs').upload(path, file, { upsert: false });
-        if (!upErr) {
-          const { data: urlData } = supabaseClient.storage.from('proofs').getPublicUrl(path);
-          proofUrl = urlData?.publicUrl || null;
-        }
-      } catch(err) { console.warn('Proof upload failed:', err); }
-    }
-
-    if (supabaseClient) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('orders')
-          .insert([{
-            customer_name: `${firstName} ${lastName}`,
-            phone: phone,
-            address: `${address}, ${governorateName}`,
-            governorate: governorateName,
             payment_method: payment,
             proof_url: proofUrl,
             items: cart,
