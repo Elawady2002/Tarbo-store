@@ -310,6 +310,15 @@
       <div class="order-summary">
         <h2 id="lblSummary">Order Summary</h2>
         <div id="checkoutItems" class="cart-items"></div>
+        
+        <!-- Coupon Section -->
+        <div class="coupon-section" style="margin-bottom: 24px; padding-top: 24px; border-top: 1px solid var(--gray-200);">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="couponInput" placeholder="Discount code" style="flex:1; padding:10px; border:1px solid var(--gray-300); border-radius:4px; text-transform:uppercase;" />
+            <button type="button" onclick="applyCoupon()" id="applyCouponBtn" style="padding:0 20px; background:var(--black); color:white; border:none; border-radius:4px; font-weight:600; cursor:pointer;">Apply</button>
+          </div>
+          <div id="couponMsg" style="font-size:12px; margin-top:8px;"></div>
+        </div>
         <div class="summary-totals">
           <div class="total-row">
             <span id="lblSubtotal">Subtotal</span>
@@ -318,6 +327,10 @@
           <div class="total-row">
             <span id="lblShippingRow">Shipping</span>
             <span id="shippingDisplay">—</span>
+          </div>
+          <div class="total-row" id="discountRow" style="display:none; color: #2d7a2d;">
+            <span id="lblDiscount">Discount</span>
+            <span id="discountDisplay">- LE 0.00</span>
           </div>
           <div class="total-row grand-total">
             <span id="lblTotal">Total</span>
@@ -388,6 +401,8 @@
   let currentLang = localStorage.getItem('checkoutLang') || 'en';
   let shippingCost = 0;
   let walletPhone = '';
+  let appliedCoupon = null;
+  let discountAmount = 0;
   // Initialized with fallback IMMEDIATELY
   const FALLBACK_GOVERNORATES = [
     {id:'cairo',    name_ar:'القاهرة',       name_en:'Cairo',         shipping_price:50},
@@ -489,14 +504,85 @@
 
   function recalcTotal() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+    let subtotal = 0;
+    discountAmount = 0;
+
+    cart.forEach(item => {
+      let itemPrice = parseFloat(item.price) || 0;
+      subtotal += itemPrice;
+      
+      // Calculate discount
+      if (appliedCoupon) {
+        if (!appliedCoupon.product_id || appliedCoupon.product_id == item.productId) {
+          discountAmount += itemPrice * (appliedCoupon.discount_percentage / 100);
+        }
+      }
+    });
+
     const subtotalDisplay = document.getElementById('subtotalDisplay');
     const totalDisplay = document.getElementById('totalDisplay');
+    const discountRow = document.getElementById('discountRow');
+    const discountDisplay = document.getElementById('discountDisplay');
+
     if (subtotalDisplay) subtotalDisplay.textContent = `LE ${subtotal.toLocaleString()}.00`;
-    if (totalDisplay) totalDisplay.textContent = `LE ${(subtotal + shippingCost).toLocaleString()}.00`;
+    
+    if (discountAmount > 0) {
+      if (discountRow) discountRow.style.display = 'flex';
+      if (discountDisplay) discountDisplay.textContent = `- LE ${discountAmount.toLocaleString()}.00`;
+    } else {
+      if (discountRow) discountRow.style.display = 'none';
+    }
+
+    const finalTotal = subtotal - discountAmount + shippingCost;
+    if (totalDisplay) totalDisplay.textContent = `LE ${finalTotal.toLocaleString()}.00`;
     
     // Sync back to localStorage just in case
-    localStorage.setItem('cartTotal', subtotal);
+    localStorage.setItem('cartTotal', finalTotal);
+  }
+
+  async function applyCoupon() {
+    if (!supabaseClient) return;
+    const input = document.getElementById('couponInput');
+    const msg = document.getElementById('couponMsg');
+    const btn = document.getElementById('applyCouponBtn');
+    if (!input || !msg) return;
+
+    const code = input.value.trim().toUpperCase();
+    if (!code) {
+      msg.textContent = currentLang === 'ar' ? 'الرجاء إدخال كود الخصم.' : 'Please enter a discount code.';
+      msg.style.color = '#dc3545';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '...';
+    
+    try {
+      const { data, error } = await supabaseClient
+        .from('coupons')
+        .select('*')
+        .eq('code', code)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        msg.textContent = currentLang === 'ar' ? 'كود الخصم غير صحيح أو منتهي الصلاحية.' : 'Invalid or expired coupon code.';
+        msg.style.color = '#dc3545';
+        appliedCoupon = null;
+      } else {
+        appliedCoupon = data;
+        msg.textContent = currentLang === 'ar' ? `تم تطبيق خصم ${data.discount_percentage}% بنجاح!` : `${data.discount_percentage}% discount applied successfully!`;
+        msg.style.color = '#28a745';
+      }
+    } catch(e) {
+      msg.textContent = 'Error applying coupon.';
+      msg.style.color = '#dc3545';
+      appliedCoupon = null;
+    }
+
+    btn.disabled = false;
+    btn.textContent = currentLang === 'ar' ? 'تطبيق' : 'Apply';
+    recalcTotal();
   }
 
   function switchPayment(method) {
