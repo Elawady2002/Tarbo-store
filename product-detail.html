@@ -512,7 +512,12 @@
     </div>
   </footer>
 
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
+    const supabaseUrl = 'https://erbidxbhooavcynttbml.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmlkeGJob29hdmN5bnR0Ym1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxODk5MTgsImV4cCI6MjA5Mjc2NTkxOH0.HyksCx9ZVhZNdXfgNLiH3V9HnZUDh8I3KFbM_ovUn8o';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
     let selectedSize = null;
     let selectedColor = null;
     let currentView = 'front'; // 'front' or 'back'
@@ -520,14 +525,15 @@
     let currentProductPrice = 1200;
     let currentStoredProduct = null;
 
-    // Simulate reading URL params and sessionStorage if we were passing data
-    document.addEventListener('DOMContentLoaded', () => {
-      const storedProduct = JSON.parse(sessionStorage.getItem('selectedProduct') || 'null');
-      const name = storedProduct && storedProduct.name;
-      const price = storedProduct && storedProduct.price;
-      const oldPrice = storedProduct && storedProduct.old_price;
+    function renderProductDetails(storedProduct) {
+      if (!storedProduct) return;
+      currentStoredProduct = storedProduct;
+      
+      const name = storedProduct.name;
+      const price = storedProduct.price;
+      const oldPrice = storedProduct.old_price;
       const img = sessionStorage.getItem('selectedProductImg');
-      const imageUrls = storedProduct && Array.isArray(storedProduct.imageUrls) ? storedProduct.imageUrls : (img ? [img] : []);
+      const imageUrls = Array.isArray(storedProduct.imageUrls) ? storedProduct.imageUrls : (img ? [img] : []);
 
       if (name) {
         currentProductName = name;
@@ -546,11 +552,11 @@
         }
       }
 
-      if (storedProduct && storedProduct.description) {
+      if (storedProduct.description) {
         document.getElementById('productDescription').textContent = storedProduct.description;
       }
 
-      if (storedProduct && Array.isArray(storedProduct.sizes) && storedProduct.sizes.length) {
+      if (Array.isArray(storedProduct.sizes) && storedProduct.sizes.length) {
         const sizeOptions = document.querySelector('.size-options');
         sizeOptions.innerHTML = '';
         storedProduct.sizes.forEach(size => {
@@ -562,9 +568,7 @@
         });
       }
 
-      currentStoredProduct = storedProduct;
-
-      if (storedProduct && Array.isArray(storedProduct.colors) && storedProduct.colors.length) {
+      if (Array.isArray(storedProduct.colors) && storedProduct.colors.length) {
         const colorContainer = document.getElementById('colorSelectorContainer');
         const colorOptions = document.getElementById('colorOptions');
         colorContainer.style.display = 'block';
@@ -580,9 +584,31 @@
       } else {
         renderImages(imageUrls);
       }
-      
       updateCartCount();
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // First try to load from session storage for instant UI
+      let storedProduct = JSON.parse(sessionStorage.getItem('selectedProduct') || 'null');
+      if (storedProduct) renderProductDetails(storedProduct);
+
+      // Then fetch fresh data from Supabase
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get('id');
+      if (id) {
+        const { data, error } = await supabaseClient.from('products').select('*').eq('id', id).single();
+        if (data) {
+          const updatedProduct = { ...storedProduct, ...data };
+          // Re-render with fresh data
+          renderProductDetails(updatedProduct);
+          // Update sessionStorage as well
+          sessionStorage.setItem('selectedProduct', JSON.stringify(updatedProduct));
+        }
+      } else {
+        updateCartCount();
+      }
     });
+
 
     function selectColor(btn, colorObj, idx) {
       document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
