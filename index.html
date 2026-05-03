@@ -1114,6 +1114,16 @@
             if (url && !urls.includes(url)) urls.push(url);
           });
         }
+        if (Array.isArray(color.frontImages)) {
+          color.frontImages.forEach(url => {
+            if (url && !urls.includes(url)) urls.push(url);
+          });
+        }
+        if (Array.isArray(color.backImages)) {
+          color.backImages.forEach(url => {
+            if (url && !urls.includes(url)) urls.push(url);
+          });
+        }
       });
     }
 
@@ -1142,7 +1152,7 @@
         <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(productName)}" style="cursor: pointer;" />
         ${product.old_price ? '<span class="badge">Sale</span>' : ''}
         <div class="quick-add">
-          <button class="btn-secondary" type="button">Add to Cart</button>
+          <button class="btn-secondary" type="button">Select Options</button>
         </div>
       </div>
       <div class="product-info">
@@ -1155,7 +1165,7 @@
     `;
 
     card.querySelector('img').addEventListener('click', () => goToProduct(product, imageUrls));
-    card.querySelector('.quick-add button').addEventListener('click', (event) => addToCart(event.currentTarget, productName, safePrice, imageUrl));
+    card.querySelector('.quick-add button').addEventListener('click', () => goToProduct(product, imageUrls));
     
     card.addEventListener('mouseenter', () => {
       const qa = card.querySelector('.quick-add');
